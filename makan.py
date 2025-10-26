@@ -2,12 +2,11 @@ import telebot
 from telebot import types
 import json, os, random, datetime
 
-# 🔑 Импорт токена
-try:
-    from config import TOKEN
-except:
-    print("❌ Error: create config.py with TOKEN = 'your_token_here'")
-    raise
+TOKEN = os.environ.get("TOKEN")
+
+if not TOKEN:
+    print("❌ Error: TOKEN not found in environment variables")
+    exit()
 
 bot = telebot.TeleBot(TOKEN)
 
