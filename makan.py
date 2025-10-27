@@ -181,13 +181,16 @@ def progress(message):
 def index():
     return "✅ KazLangBot is alive!", 200
 
-# ⚡ Правильный route без двоеточий
-@app.route("/webhook", methods=["POST"])
+# === Правильный webhook endpoint ===
+@app.route("/webhook", methods=["GET", "POST"])
 def webhook():
-    update = request.get_json()
-    if update:
-        bot.process_new_updates([telebot.types.Update.de_json(update)])
-    return "ok", 200
+    if request.method == "GET":
+        return "Bot webhook is active ✅", 200
+    elif request.method == "POST":
+        update = request.get_json()
+        if update:
+            bot.process_new_updates([telebot.types.Update.de_json(update)])
+        return "ok", 200
 
 # === Запуск ===
 if __name__ == "__main__":
