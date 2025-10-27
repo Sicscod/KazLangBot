@@ -181,18 +181,19 @@ def progress(message):
 def index():
     return "✅ KazLangBot is alive!", 200
 
-# === Правильный webhook endpoint ===
+# === Правильный маршрут webhook ===
 @app.route("/webhook", methods=["GET", "POST"])
 def webhook():
     if request.method == "GET":
-        return "Bot webhook is active ✅", 200
-    elif request.method == "POST":
+        return "Webhook is active ✅", 200
+
+    if request.method == "POST":
         update = request.get_json()
         if update:
             bot.process_new_updates([telebot.types.Update.de_json(update)])
         return "ok", 200
 
-# === Запуск ===
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     print(f"🚀 Server started on port {port}")
