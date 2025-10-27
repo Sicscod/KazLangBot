@@ -176,16 +176,17 @@ def progress(message):
 
 
 # === Flask routes ===
-@app.route("/")
+@app.route("/", methods=["GET"])
 def index():
-    return "✅ KazLangBot is alive!", 200
+    return "✅ KazLangBot is running!", 200
 
 @app.route("/webhook", methods=["GET", "POST"])
 def webhook():
     if request.method == "GET":
-        return "Webhook is active ✅", 200
+        return "Webhook active ✅", 200
+
     if request.method == "POST":
-        update = request.get_json()
+        update = request.get_json(force=True, silent=True)
         if update:
             bot.process_new_updates([telebot.types.Update.de_json(update)])
         return "ok", 200
