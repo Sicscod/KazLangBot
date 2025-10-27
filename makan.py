@@ -186,7 +186,7 @@ def progress(message):
 def index():
     return "✅ KazLangBot is alive!", 200
 
-@app.route(f'/{TOKEN}', methods=['POST'])
+@app.route('/7690089205:AAGv__UITt-E2Q1OYTQYzgI8F8lBROCttHM', methods=['POST'])
 def webhook():
     update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
     bot.process_new_updates([update])
