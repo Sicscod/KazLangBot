@@ -6,13 +6,8 @@ import telebot
 from telebot import types
 from flask import Flask, request
 
-# === TOKEN из переменных окружения ===
-TOKEN = os.environ.get("TOKEN")
-
-if not TOKEN:
-    print("❌ Error: TOKEN not found in environment variables")
-    exit()
-
+# === Токен бота ===
+TOKEN = "7690089205:AAGv__UITt-E2Q1OYTQYzgI8F8lBROCttHM"
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
@@ -182,28 +177,19 @@ def progress(message):
 
 # === Flask routes ===
 
-@app.route('/')
+@app.route("/")
 def index():
     return "✅ KazLangBot is alive!", 200
 
-@app.route(f"/{TOKEN}", methods=["POST"])
-def receive_update():
+@app.route("/7690089205:AAGv__UITt-E2Q1OYTQYzgI8F8lBROCttHM", methods=["POST"])
+def webhook():
     update = request.get_json()
     if update:
         bot.process_new_updates([telebot.types.Update.de_json(update)])
     return "ok", 200
 
-
-#@app.before_first_request
-#def set_webhook():
-#    bot.remove_webhook()
-#    bot.set_webhook(url=f"https://kazlangbot.onrender.com/{TOKEN}")
-#    print("✅ Webhook set successfully!")
-
 # === Запуск ===
 if __name__ == "__main__":
-    import time
-    time.sleep(2)
-    port = int(os.environ.get("PORT", 10000))
+    port = int(os.environ.get("PORT", 8080))
     print(f"🚀 Server started on port {port}")
     app.run(host="0.0.0.0", port=port)
