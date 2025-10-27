@@ -181,7 +181,8 @@ def progress(message):
 def index():
     return "✅ KazLangBot is alive!", 200
 
-@app.route("/7690089205:AAGv__UITt-E2Q1OYTQYzgI8F8lBROCttHM", methods=["POST"])
+# ⚡ Правильный route без двоеточий
+@app.route("/webhook", methods=["POST"])
 def webhook():
     update = request.get_json()
     if update:
