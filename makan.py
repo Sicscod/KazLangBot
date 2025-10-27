@@ -1,7 +1,12 @@
+import os
+import json
+import random
+import datetime
 import telebot
 from telebot import types
-import json, os, random, datetime
+from flask import Flask, request
 
+# === TOKEN из переменных окружения ===
 TOKEN = os.environ.get("TOKEN")
 
 if not TOKEN:
@@ -9,48 +14,50 @@ if not TOKEN:
     exit()
 
 bot = telebot.TeleBot(TOKEN)
+app = Flask(__name__)
 
-# === ФАЙЛЫ И ПАПКИ ===
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
-USER_DATA_FILE = os.path.join(os.path.dirname(__file__), 'user_data.json')
+# === Пути к файлам ===
+BASE_DIR = os.path.dirname(__file__)
+DATA_DIR = os.path.join(BASE_DIR, "data")
+USER_DATA_FILE = os.path.join(BASE_DIR, "user_data.json")
 
-def load_json(name):
-    path = os.path.join(DATA_DIR, name)
+def load_json(filename):
+    path = os.path.join(DATA_DIR, filename)
     if os.path.exists(path):
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
     return []
 
-WORDS = load_json('words.json')
-PHRASES = load_json('phrases.json')
-GRAMMAR = load_json('grammar.json')
+WORDS = load_json("words.json")
+PHRASES = load_json("phrases.json")
+GRAMMAR = load_json("grammar.json")
 
 def load_user_data():
     if os.path.exists(USER_DATA_FILE):
-        with open(USER_DATA_FILE, 'r', encoding='utf-8') as f:
+        with open(USER_DATA_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
     return {}
 
 def save_user_data(data):
-    with open(USER_DATA_FILE, 'w', encoding='utf-8') as f:
+    with open(USER_DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 user_data = load_user_data()
 
-# === ТЕМЫ QUIZLET ===
 topics = {
     "🌿 Адам және өмір": {
         "🫀 Дененің бөліктері": "https://quizlet.com/kz/1097300479/anatilдененің-бөліктері-части-тела-flash-cards/",
         "👨‍👩‍👧‍👦 Отбасы": "https://quizlet.com/kz/1097570867/anatil-отбасы-семья-flash-cards/",
         "👗 Киім": "https://quizlet.com/kz/1097575466/anatil-киім-одежда-flash-cards/",
-        "💼 Кәсіптер": "https://quizlet.com/kz/1097575460/anatil-кәсіптер-профессии-flash-cards/?new",
-        "😊 Эмоциялар": "https://quizlet.com/kz/1097582619/anatilэмоциялар-эмоции-flash-cards/?new",
-        "🎭 Сипаттау": "https://quizlet.com/kz/1097582616/anatilсипаттау-описание-человека-flash-cards/?new",
-        "🧠 Мінез-құлық": "https://quizlet.com/kz/1097616655/anatil-мінез-құлық-характер-и-поведение-flash-cards/?new"
+        "💼 Кәсіптер": "https://quizlet.com/kz/1097575460/anatil-кәсіптер-профессии-flash-cards/",
+        "😊 Эмоциялар": "https://quizlet.com/kz/1097582619/anatilэмоциялар-эмоции-flash-cards/",
+        "🎭 Сипаттау": "https://quizlet.com/kz/1097582616/anatilсипаттау-описание-человека-flash-cards/",
+        "🧠 Мінез-құлық": "https://quizlet.com/kz/1097616655/anatil-мінез-құлық-характер-и-поведение-flash-cards/"
     }
 }
 
-# === СТАРТ ===
+# === Команды ===
+
 @bot.message_handler(commands=['start'])
 def start(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
@@ -60,8 +67,8 @@ def start(message):
         types.KeyboardButton("💬 Фраза дня"),
         types.KeyboardButton("📈 Прогресс")
     )
-    now = datetime.datetime.now().hour
-    greeting = "🌅 Қайырлы таң!" if now < 12 else ("🌇 Қайырлы кеш!" if now < 18 else "🌙 Қайырлы түн!")
+    hour = datetime.datetime.now().hour
+    greeting = "🌅 Қайырлы таң!" if hour < 12 else ("🌇 Қайырлы кеш!" if hour < 18 else "🌙 Қайырлы түн!")
     phrase = random.choice(PHRASES)["kz"] if PHRASES else "Білім — табысқа бастар жол."
     bot.send_message(
         message.chat.id,
@@ -74,21 +81,20 @@ def start(message):
         reply_markup=markup
     )
 
-# === ФРАЗА ДНЯ ===
 @bot.message_handler(func=lambda m: m.text == "💬 Фраза дня")
-def send_phrase(message):
+def phrase_day(message):
     if not PHRASES:
         return bot.send_message(message.chat.id, "⚠️ Фразалар базасы бос.")
     p = random.choice(PHRASES)
-    text = (
+    bot.send_message(
+        message.chat.id,
         f"💫 *Бүгінгі фраза:*\n\n"
         f"🇰🇿 {p['kz']}\n"
         f"🇷🇺 {p['ru']}\n\n"
-        f"🌟 _Мысалы:_ {p.get('example', 'жоқ')}"
+        f"🌟 _Мысалы:_ {p.get('example', 'жоқ')}",
+        parse_mode="Markdown"
     )
-    bot.send_message(message.chat.id, text, parse_mode="Markdown")
 
-# === QUIZLET ТЕМЫ ===
 @bot.message_handler(func=lambda m: m.text == "📚 Темы")
 def show_topics(message):
     markup = types.InlineKeyboardMarkup()
@@ -96,7 +102,7 @@ def show_topics(message):
         markup.add(types.InlineKeyboardButton(t, callback_data=f"topic|{t}"))
     bot.send_message(message.chat.id, "📘 *Quizlet тақырыптары:*", parse_mode="Markdown", reply_markup=markup)
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("topic|"))
+@bot.callback_query_handler(func=lambda c: c.data.startswith("topic|"))
 def show_subtopics(call):
     topic_name = call.data.split("|")[1]
     subtopics = topics[topic_name]
@@ -105,15 +111,13 @@ def show_subtopics(call):
         markup.add(types.InlineKeyboardButton(sub, url=link))
     bot.send_message(call.message.chat.id, f"✨ *{topic_name}* тақырыптары:", parse_mode="Markdown", reply_markup=markup)
 
-# === ВИКТОРИНА (улучшенная) ===
 @bot.message_handler(func=lambda m: m.text == "🧠 Викторина")
-def start_quiz(message):
-    send_quiz_question(message.chat.id)
+def quiz(message):
+    send_quiz(message.chat.id)
 
-def send_quiz_question(chat_id):
+def send_quiz(chat_id):
     if not WORDS:
-        bot.send_message(chat_id, "⚠️ Сөздер базасы бос.")
-        return
+        return bot.send_message(chat_id, "⚠️ Сөздер базасы бос.")
     w = random.choice(WORDS)
     correct = w["ru"]
     options = [correct]
@@ -122,7 +126,6 @@ def send_quiz_question(chat_id):
         if opt not in options:
             options.append(opt)
     random.shuffle(options)
-
     markup = types.InlineKeyboardMarkup()
     for opt in options:
         markup.add(types.InlineKeyboardButton(opt, callback_data=f"quiz|{w['kz']}|{opt}|{correct}"))
@@ -131,23 +134,16 @@ def send_quiz_question(chat_id):
 @bot.callback_query_handler(func=lambda c: c.data.startswith("quiz|"))
 def quiz_answer(call):
     _, kz, chosen, correct = call.data.split("|")
-    user_id = str(call.message.chat.id)
-    if user_id not in user_data:
-        user_data[user_id] = {"known": [], "score": 0, "xp": 0}
-    if "xp" not in user_data[user_id]:
-        user_data[user_id]["xp"] = 0
-
-
-
+    uid = str(call.message.chat.id)
+    if uid not in user_data:
+        user_data[uid] = {"known": [], "score": 0, "xp": 0}
     if chosen == correct:
-        user_data[user_id]["score"] += 1
-        user_data[user_id]["xp"] += 10
+        user_data[uid]["score"] += 1
+        user_data[uid]["xp"] += 10
         msg = f"✅ Дұрыс! *{kz}* = {correct}\n+10 XP 🔥"
     else:
         msg = f"❌ Қате. Дұрыс жауап: *{correct}*"
-
     save_user_data(user_data)
-
     markup = types.InlineKeyboardMarkup()
     markup.add(
         types.InlineKeyboardButton("▶️ Жалғастыру", callback_data="quiz_next"),
@@ -156,43 +152,56 @@ def quiz_answer(call):
     bot.send_message(call.message.chat.id, msg, parse_mode="Markdown", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda c: c.data in ["quiz_next", "quiz_stop"])
-def quiz_continue_or_stop(call):
-    user_id = str(call.message.chat.id)
+def quiz_control(call):
+    uid = str(call.message.chat.id)
     if call.data == "quiz_next":
-        send_quiz_question(call.message.chat.id)
+        send_quiz(call.message.chat.id)
     else:
-        data = user_data.get(user_id, {"score": 0, "xp": 0})
+        data = user_data.get(uid, {"score": 0, "xp": 0})
         xp = data["xp"]
         lvl = "🥉" if xp < 50 else ("🥈" if xp < 150 else "🥇")
-        progress = min(10, xp // 10)
-        bar = "█" * progress + "░" * (10 - progress)
+        bar = "█" * min(10, xp // 10) + "░" * (10 - min(10, xp // 10))
         bot.send_message(
             call.message.chat.id,
-            f"🏁 Викторина аяқталды!\n\n"
-            f"📊 Прогресс: {bar} {xp}%\n"
-            f"🏆 Жалпы ұпай: {data['score']}\n"
-            f"🔥 Деңгей: {lvl}",
+            f"🏁 Викторина аяқталды!\n\n📊 Прогресс: {bar} {xp} XP\n🏆 Ұпай: {data['score']}\n🔥 Деңгей: {lvl}",
             parse_mode="Markdown"
         )
 
-# === ПРОГРЕСС ===
 @bot.message_handler(func=lambda m: m.text == "📈 Прогресс")
-def stats(message):
-    user_id = str(message.chat.id)
-    data = user_data.get(user_id, {"known": [], "score": 0, "xp": 0})
-    lvl = "🥉 Бастауыш" if data["xp"] < 50 else "🥈 Орта" if data["xp"] < 150 else "🥇 Жетік"
-    progress = min(10, data["xp"] // 10)
-    bar = "█" * progress + "░" * (10 - progress)
+def progress(message):
+    uid = str(message.chat.id)
+    d = user_data.get(uid, {"known": [], "score": 0, "xp": 0})
+    lvl = "🥉 Бастауыш" if d["xp"] < 50 else "🥈 Орта" if d["xp"] < 150 else "🥇 Жетік"
+    bar = "█" * min(10, d["xp"] // 10) + "░" * (10 - min(10, d["xp"] // 10))
     bot.send_message(
         message.chat.id,
-        f"📊 *Сенің нәтижелерің:*\n\n"
-        f"📘 Үйренген сөздер: {len(data['known'])}\n"
-        f"🏆 Викторина ұпайы: {data['score']}\n"
-        f"🔥 XP: {data['xp']}\n"
-        f"{bar} ({data['xp']} XP)\n"
-        f"📈 Деңгей: {lvl}",
+        f"📊 *Сенің нәтижелерің:*\n\n📘 Үйренген сөздер: {len(d['known'])}\n"
+        f"🏆 Ұпай: {d['score']}\n🔥 XP: {d['xp']}\n{bar}\n📈 Деңгей: {lvl}",
         parse_mode="Markdown"
     )
 
-print("🚀 AnaTili Bot v2.0 is running...")
-bot.polling(none_stop=True)
+# === Flask routes ===
+
+@app.route('/')
+def index():
+    return "✅ KazLangBot is alive!", 200
+
+@app.route(f'/{TOKEN}', methods=['POST'])
+def webhook():
+    update = telebot.types.Update.de_json(request.stream.read().decode("utf-8"))
+    bot.process_new_updates([update])
+    return "OK", 200
+
+#@app.before_first_request
+#def set_webhook():
+#    bot.remove_webhook()
+#    bot.set_webhook(url=f"https://kazlangbot.onrender.com/{TOKEN}")
+#    print("✅ Webhook set successfully!")
+
+# === Запуск ===
+if __name__ == "__main__":
+    import time
+    time.sleep(2)
+    port = int(os.environ.get("PORT", 10000))
+    print(f"🚀 Server started on port {port}")
+    app.run(host="0.0.0.0", port=port)
