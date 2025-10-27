@@ -6,6 +6,34 @@ import telebot
 from telebot import types
 from flask import Flask, request
 
+TOKEN = "7690089205:AAGv__UITt-E2Q1OYTQYzgI8F8lBROCttHM"
+bot = telebot.TeleBot(TOKEN)
+app = Flask(__name__)
+
+@app.route("/", methods=["GET"])
+def home():
+    return "✅ KazLangBot is running!", 200
+
+@app.route("/webhook", methods=["POST", "GET"])
+def webhook():
+    if request.method == "GET":
+        return "Webhook is active ✅", 200
+    elif request.method == "POST":
+        data = request.get_json()
+        if data:
+            update = telebot.types.Update.de_json(data)
+            bot.process_new_updates([update])
+        return "ok", 200
+
+@bot.message_handler(commands=["start"])
+def start(msg):
+    bot.reply_to(msg, "Салам! Бот работает через Railway 🚀")
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8080))
+    print(f"🚀 Server started on port {port}")
+    app.run(host="0.0.0.0", port=port)
+
 # === Токен бота ===
 TOKEN = "7690089205:AAGv__UITt-E2Q1OYTQYzgI8F8lBROCttHM"
 bot = telebot.TeleBot(TOKEN)
@@ -175,26 +203,4 @@ def progress(message):
         parse_mode="Markdown"
     )
 
-# === Flask routes ===
 
-@app.route("/")
-def index():
-    return "✅ KazLangBot is alive!", 200
-
-# === Правильный маршрут webhook ===
-@app.route("/webhook", methods=["GET", "POST"])
-def webhook():
-    if request.method == "GET":
-        return "Webhook is active ✅", 200
-
-    if request.method == "POST":
-        update = request.get_json()
-        if update:
-            bot.process_new_updates([telebot.types.Update.de_json(update)])
-        return "ok", 200
-
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    print(f"🚀 Server started on port {port}")
-    app.run(host="0.0.0.0", port=port)
