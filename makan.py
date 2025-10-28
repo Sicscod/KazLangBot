@@ -6,12 +6,12 @@ import telebot
 from telebot import types
 from flask import Flask, request
 
-# === Токен бота ===
-TOKEN = "7690089205:AAGv__UITt-E2Q1OYTQYzgI8F8lBROCttHM"
+# === Настройки ===
+TOKEN = os.getenv("BOT_TOKEN")  # теперь токен берется из Railway Variables
 bot = telebot.TeleBot(TOKEN)
 app = Flask(__name__)
 
-# === Пути к файлам ===
+# === Пути к данным ===
 BASE_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(BASE_DIR, "data")
 USER_DATA_FILE = os.path.join(BASE_DIR, "user_data.json")
@@ -174,24 +174,19 @@ def progress(message):
         parse_mode="Markdown"
     )
 
-
 # === Flask routes ===
 @app.route("/", methods=["GET"])
 def index():
     return "✅ KazLangBot is running!", 200
 
-@app.route("/webhook", methods=["GET", "POST"])
+@app.route("/webhook", methods=["POST"])
 def webhook():
-    if request.method == "GET":
-        return "Webhook active ✅", 200
+    update = request.get_json(force=True, silent=True)
+    if update:
+        bot.process_new_updates([telebot.types.Update.de_json(update)])
+    return "ok", 200
 
-    if request.method == "POST":
-        update = request.get_json(force=True, silent=True)
-        if update:
-            bot.process_new_updates([telebot.types.Update.de_json(update)])
-        return "ok", 200
-
-
+# === Main ===
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     print(f"🚀 Server started on port {port}")
